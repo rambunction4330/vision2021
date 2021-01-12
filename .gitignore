@@ -33,3 +33,12 @@
 
 # DS_Store
 .DS_Store
+
+# VS Code files
+/.vscode
+
+# build directories
+**/bin
+**/build
+**/lib
+**/obj
