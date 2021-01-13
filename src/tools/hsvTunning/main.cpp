@@ -2,13 +2,10 @@
 #include <string>
 #include <vector>
 #include <math.h>
+#include <filesystem>
 
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
-
-static void radioButtonCallback(int state, void* data) {
-  *reinterpret_cast<bool*>(data) = (state == 0) ? false : true; 
-}
 
 int main(int argc, char** argv) {
 
@@ -19,7 +16,8 @@ int main(int argc, char** argv) {
   // Keys for argument parsing
   const std::string keys = 
   "{ h ? help usage |   | prints this message             }"
-  "{ c camera       | 0 | Camera id used for thresholding }";
+  "{ c camera       | 0 | Camera id used for thresholding }"
+  "{ i images       |   | Optional images for HSV Tunning }";
 
   // Parser object
   cv::CommandLineParser parser(argc, argv, keys);
@@ -33,7 +31,9 @@ int main(int argc, char** argv) {
   }
 
   // Get arguments from the parser
-  int cameraID = parser.get<double>("camera"); // camera id
+  int cameraID = parser.get<double>("camera");
+  bool useImages = parser.has("images");
+  std::string pathToImages = parser.get<std::string>("images");
 
   // Cheack for errors
   if (!parser.check()) {
@@ -64,26 +64,58 @@ int main(int argc, char** argv) {
   // Camera Initialization
   //****************************************************************************
 
-  // Camera
-  cv::VideoCapture capture(cameraID);
+  // Camera for video tunning
+  cv::VideoCapture capture;
 
-  // Check camera data
-  if (!capture.isOpened()) {
-    std::cerr << "Could access camera\n";
-    return 0;
-  }
+  // Image vector for image tunning
+  std::vector<cv::Mat> images;
 
-  bool showThresh = true, useBallDetection = false;
-  cv::Mat frame, blur, hsv, thresh, erode0, dilate, erode1, display;
-  while (true) {
+  if (useImages) {
+    if (!std::filesystem::exists(pathToImages)) {
+      std::cerr << "Could not find directory" << pathToImages << "\n";
+      return 0;
+    }
 
-    // Get the next frame from the camera
-    capture >> frame;
+    for (auto file : std::filesystem::directory_iterator(pathToImages)) {
+      cv::Mat image = cv::imread(file.path().string());
+      if (!image.empty()) {
+        images.push_back(image);
+      }
+    }
+
+    if (images.empty()) {
+      std::cerr << "No images culd be found at" << pathToImages << "\n";
+      return 0;
+    }
+
+  } else {
+    // Camera
+    bool opened = capture.open(cameraID);
 
     // Check camera data
-    if (frame.empty()) {
-      std::cerr << "Lost connection to camera\n";
-      break;
+    if (!opened) {
+      std::cerr << "Could access camera\n";
+      return 0;
+    }
+  }
+
+  int imageIndex = 0;
+  bool showThresh = true, useBallDetection = false;
+  cv::Mat image, blur, hsv, thresh, erode0, dilate, erode1, display;
+  while (true) {
+    imageIndex = std::clamp(imageIndex, 0, (int) images.size()-1);
+    
+    if (useImages) {
+      image = images[imageIndex];
+    } else {
+      // Get the next frame from the camera
+      capture >> image;
+
+      // Check camera data
+      if (image.empty()) {
+        std::cerr << "Lost connection to camera\n";
+        break;
+      }
     }
 
     //**************************************************************************
@@ -91,7 +123,7 @@ int main(int argc, char** argv) {
     //**************************************************************************
 
     // Blur frame to remove image noise
-    cv::GaussianBlur(frame, blur, {15, 15}, 5);
+    cv::GaussianBlur(image, blur, {15, 15}, 5);
 
     // Threshold the image in the hsv color space.
     cv::cvtColor(blur, hsv, cv::COLOR_BGR2HSV);
@@ -108,7 +140,7 @@ int main(int argc, char** argv) {
     if (showThresh) {
       cv::cvtColor(erode1, display, cv::COLOR_GRAY2BGR);
     } else {
-      frame.copyTo(display);
+      image.copyTo(display);
     }
 
     //**************************************************************************
@@ -146,6 +178,9 @@ int main(int argc, char** argv) {
 
     showThresh = (key == 't') ? !showThresh : showThresh;
     useBallDetection = (key == 'b') ? !useBallDetection : useBallDetection;
+
+    imageIndex += (key = '>' || key == '.') ? 1 : 0;
+    imageIndex -= (key = '<' || key == ',') ? 1 : 0;
 
     if (key == 'q' || key == 27) {
       break;
