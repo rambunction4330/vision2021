@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3)
+cmake_minimum_required(VERSION 3.0.0)
 project(vision2021 VERSION 0.0.0)
 
 # The project is set to build with C++17
@@ -14,4 +14,4 @@ add_subdirectory(src/rambunctionVision)
 add_subdirectory(src/vision/ballDetection)
 add_subdirectory(src/vision/targetDetection)
 add_subdirectory(src/tools/hsvTunning)
-add_subdirectory(src/tools/cameraCaliration)
+add_subdirectory(src/tools/cameraCalibration)
