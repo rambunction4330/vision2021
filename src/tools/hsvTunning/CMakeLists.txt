@@ -7,4 +7,6 @@ find_package(OpenCV REQUIRED)
 add_executable(hsvTunning main.cpp)
 
 # Linked Libraries
-target_link_libraries(hsvTunning ${OpenCV_LIBS})
+target_link_libraries(hsvTunning ${OpenCV_LIBS} rambunctionVision)
+
+target_include_directories(hsvTunning PUBLIC ${PROJECT_SOURCE_DIR}/include)

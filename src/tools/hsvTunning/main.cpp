@@ -7,6 +7,8 @@
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
 
+#include "rambunctionVision/contourProcessing.hpp"
+
 int main(int argc, char** argv) {
 
   //****************************************************************************
@@ -84,7 +86,7 @@ int main(int argc, char** argv) {
     }
 
     if (images.empty()) {
-      std::cerr << "No images culd be found at" << pathToImages << "\n";
+      std::cerr << "No images could be found at" << pathToImages << "\n";
       return 0;
     }
 
@@ -100,7 +102,7 @@ int main(int argc, char** argv) {
   }
 
   int imageIndex = 0;
-  bool showThresh = true, useBallDetection = false;
+  bool showThresh = true, useBallDetection = false, useTargetDetection = false;
   cv::Mat image, blur, hsv, thresh, erode0, dilate, erode1, display;
   while (true) {
     imageIndex = std::clamp(imageIndex, 0, (int) images.size()-1);
@@ -152,21 +154,10 @@ int main(int argc, char** argv) {
       std::vector<std::vector<cv::Point>> contours;
       cv::findContours(erode1, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_NONE);
 
-      for (auto contour : contours) {
-        // Find aproximate circle
-        cv::Point2f center;
-        float radius;
-        cv::minEnclosingCircle(contour, center, radius);
+      std::vector<rv::CircleMatch> circles = rv::findCircles(contours, 50, 0.60);
 
-        // Amount of enclosing circle that is filled by the contour.
-        // (A sort of circularness calculation. The closer to 1 the better) 
-        double percentFull = cv::contourArea(contour) / (radius * radius * M_PI);
-
-        // Filters for aertain percent full, and minimum size
-        if (cv::contourArea(contour) > 20 && percentFull > 0.60) {
-          // Draw the estimated circle
-          cv::circle(display, center, (int) radius, {0,0,255}, 3);
-        }
+      for (auto& circle : circles) {
+        cv::circle(display, circle.circle.center, (int) circle.circle.radius, {0,0,255}, 3);
       }
     }
 
@@ -178,9 +169,10 @@ int main(int argc, char** argv) {
 
     showThresh = (key == 't') ? !showThresh : showThresh;
     useBallDetection = (key == 'b') ? !useBallDetection : useBallDetection;
+    useTargetDetection = (key == 'c') ? !useTargetDetection : useTargetDetection;
 
-    imageIndex += (key = '>' || key == '.') ? 1 : 0;
-    imageIndex -= (key = '<' || key == ',') ? 1 : 0;
+    imageIndex += (key == '>' || key == '.') ? 1 : 0;
+    imageIndex -= (key == '<' || key == ',') ? 1 : 0;
 
     if (key == 'q' || key == 27) {
       break;
