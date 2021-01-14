@@ -11,6 +11,7 @@ namespace rv {
     std::transform(input.begin(), input.end(), output.begin(), [](const cv::Point_<_InType>& p) {
       return cv::Point_<_OutType>(static_cast<_OutType>(p.x), static_cast<_OutType>(p.y));
     });
+    return output;
   }
 
   template<typename _OutType, typename _InType>
@@ -19,6 +20,7 @@ namespace rv {
     std::transform(input.begin(), input.end(), output.begin(), [](const cv::Point3_<_InType>& p) {
       return cv::Point_<_OutType>(static_cast<_OutType>(p.x), static_cast<_OutType>(p.y));
     });
+    return output;
   }
 
   template<typename _OutType, typename _InType>
@@ -27,6 +29,7 @@ namespace rv {
     std::transform(input.begin(), input.end(), output.begin(), [](const cv::Point_<_InType>& p) {
       return cv::Point3_<_OutType>(static_cast<_OutType>(p.x), static_cast<_OutType>(p.y), 0);
     });
+    return output;
   }
 
   template<typename _OutType, typename _InType>
@@ -35,6 +38,7 @@ namespace rv {
     std::transform(input.begin(), input.end(), output.begin(), [](const cv::Point3_<_InType>& p) {
       return cv::Point3_<_OutType>(static_cast<_OutType>(p.x), static_cast<_OutType>(p.y), static_cast<_OutType>(p.z));
     });
+    return output;
   }
 
   template<typename _Type>
