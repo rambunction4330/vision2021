@@ -33,6 +33,24 @@ namespace rv {
     };
   }
 
+  bool approximateNGon(std::vector<cv::Point2f>& points, int n, double start, double end, double step) {
+    std::vector<cv::Point2f> aprox;
+    for (double epsilon = start; epsilon < end; epsilon += step) {
+      cv::approxPolyDP(points, aprox, epsilon, true);
+
+      if (aprox.size() < n) {
+        return false;
+      }
+
+      if (aprox.size() == n) {
+        points = aprox;
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   std::vector<rv::TargetMatch> findTargets(std::vector<std::vector<cv::Point>> contours, std::vector<rv::Target> targets, double minArea, double minMatch) {
     std::vector<rv::TargetMatch> matches;
     for (auto& contour : contours) {

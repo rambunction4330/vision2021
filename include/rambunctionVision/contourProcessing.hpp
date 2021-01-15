@@ -51,6 +51,8 @@ namespace rv {
     cv::Mat rvec;
   };
 
+  bool approximateNGon(std::vector<cv::Point2f>& points, int n, double start = 0, double end = 100, double step = 0.1);
+
   std::vector<rv::TargetMatch> findTargets(std::vector<std::vector<cv::Point>> contours, std::vector<rv::Target> targets, double minArea, double minMatch);
 
   std::vector<rv::TargetPose> estimateTargetPose(std::vector<TargetMatch> matches, cv::Mat cameraMatrix, cv::Mat distortion);
