@@ -22,5 +22,5 @@ namespace rv {
     void setLowV(int v) { lowV() = std::clamp(v, 0, highV() - 1); }
   };
 
-  void thresholdImage(cv::Mat src, cv::Mat dst, rv::Threshold threshold);
+  void thresholdImage(cv::Mat src, cv::Mat dst,int blurSize, rv::Threshold threshold, cv::Mat open, cv::Mat close);
 }
