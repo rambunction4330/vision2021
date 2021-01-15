@@ -8,6 +8,7 @@
 #include <opencv2/imgproc.hpp>
 
 #include "rambunctionVision/contourProcessing.hpp"
+#include "rambunctionVision/imageProcessing.hpp"
 
 int main(int argc, char** argv) {
 
@@ -48,19 +49,18 @@ int main(int argc, char** argv) {
   //****************************************************************************
 
   // Threshold variables
-  std::array<int, 3> low =  {  0,   0,   0};
-  std::array<int, 3> high = {180, 255, 255};
+  rv::Threshold threshold;
 
   // Create window
   cv::namedWindow("HSV Tunning");
 
   // Create Trackbars
-  cv::createTrackbar("Low H",  "HSV Tunning", &low[0],  180);
-  cv::createTrackbar("High H", "HSV Tunning", &high[0], 180);
-  cv::createTrackbar("Low S",  "HSV Tunning", &low[1],  255);
-  cv::createTrackbar("High S", "HSV Tunning", &high[1], 255);
-  cv::createTrackbar("Low V",  "HSV Tunning", &low[2],  255);
-  cv::createTrackbar("High V", "HSV Tunning", &high[2], 255);
+  cv::createTrackbar("High H",  "HSV Tunning", &threshold.highH(),  180);
+  cv::createTrackbar("Low H", "HSV Tunning", &threshold.lowH(), 180);
+  cv::createTrackbar("High S",  "HSV Tunning", &threshold.highS(),  255);
+  cv::createTrackbar("Low S", "HSV Tunning", &threshold.lowS(), 255);
+  cv::createTrackbar("High V",  "HSV Tunning", &threshold.highV(),  255);
+  cv::createTrackbar("Low V", "HSV Tunning", &threshold.lowV(), 255);
 
   //****************************************************************************
   // Camera Initialization
@@ -103,7 +103,7 @@ int main(int argc, char** argv) {
 
   int imageIndex = 0;
   bool showThresh = true, useBallDetection = false, useTargetDetection = false;
-  cv::Mat image, blur, hsv, thresh, erode0, dilate, erode1, display;
+  cv::Mat image, thresh, display;
   while (true) {
     imageIndex = std::clamp(imageIndex, 0, (int) images.size()-1);
     
@@ -124,23 +124,11 @@ int main(int argc, char** argv) {
     // Threshold Image
     //**************************************************************************
 
-    // Blur frame to remove image noise
-    cv::GaussianBlur(image, blur, {15, 15}, 5);
-
-    // Threshold the image in the hsv color space.
-    cv::cvtColor(blur, hsv, cv::COLOR_BGR2HSV);
-    cv::inRange(hsv, low, high, thresh);
-
-    // Erode image to remove small particles.
-    // Then dilate tofill any holes.
-    // Finaly erode back down to the origional size. 
-    cv::erode(thresh, erode0, cv::getStructuringElement(cv::MORPH_RECT, cv::Size(15, 15)));
-    cv::dilate(erode0, dilate, cv::getStructuringElement(cv::MORPH_RECT, cv::Size(30, 30)));
-    cv::erode(dilate, erode1, cv::getStructuringElement(cv::MORPH_RECT, cv::Size(15, 15)));
+    rv::thresholdImage(image, thresh, 15, threshold, cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(15, 15)), cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(15, 15)));
 
     // Conditionaly display a thresheld view 
     if (showThresh) {
-      cv::cvtColor(erode1, display, cv::COLOR_GRAY2BGR);
+      cv::cvtColor(thresh, display, cv::COLOR_GRAY2BGR);
     } else {
       image.copyTo(display);
     }
@@ -152,7 +140,7 @@ int main(int argc, char** argv) {
     if (useBallDetection) {
       // Find contours in the image
       std::vector<std::vector<cv::Point>> contours;
-      cv::findContours(erode1, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_NONE);
+      cv::findContours(thresh, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_NONE);
 
       std::vector<rv::CircleMatch> circles = rv::findCircles(contours, 50, 0.60);
 
