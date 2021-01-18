@@ -51,7 +51,13 @@ namespace rv {
     cv::Mat rvec;
   };
 
-  bool approximateNGon(std::vector<cv::Point2f>& points, int n, double start = 0, double end = 100, double step = 0.1);
+  bool approximateNGon(std::vector<cv::Point2f>& src, std::vector<cv::Point2f>& dst, int n, double start = 0, double end = 100, double step = 0.1);
+
+  void reorderPoints(std::vector<cv::Point2f>& points);
+
+  cv::Mat normalizedContourImage(std::vector<cv::Point2f> contour, std::vector<cv::Point2f>& projectedContour, cv::Mat& image);
+
+  std::vector<rv::TargetMatch> matchTargetPoints(std::vector<rv::TargetMatch>& matches);
 
   std::vector<rv::TargetMatch> findTargets(std::vector<std::vector<cv::Point>> contours, std::vector<rv::Target> targets, double minArea, double minMatch);
 
