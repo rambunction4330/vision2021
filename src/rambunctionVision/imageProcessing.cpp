@@ -21,7 +21,11 @@ namespace rv {
     dst = close;
   }
 
-  void extractImagesFromDirectory(std::string filepath, std::vector<cv::Mat>& images) {
+  bool extractImagesFromDirectory(std::string filepath, std::vector<cv::Mat>& images) {
+    if (std::filesystem::exists(filepath)) {
+      return false;
+    }
+
     for (auto& file : std::filesystem::directory_iterator(filepath)) {
       cv::Mat image = cv::imread(file.path().string());
 
@@ -29,5 +33,7 @@ namespace rv {
         images.push_back(image);
       }
     }
+
+    return true;
   }
 }

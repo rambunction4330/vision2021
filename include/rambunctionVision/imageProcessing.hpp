@@ -1,5 +1,7 @@
 #pragma once
 
+#include <vector>
+
 #include <opencv2/core.hpp>
 
 namespace rv {
@@ -24,5 +26,5 @@ namespace rv {
 
   void thresholdImage(cv::Mat& src, cv::Mat& dst, int blurSize, rv::Threshold threshold, cv::Mat openMatrix, cv::Mat closeMatrix);
 
-  void extractImagesFromDirectory(std::string filepath, std::vetcor<cv::Mat>& images);
+  bool extractImagesFromDirectory(std::string filepath, std::vector<cv::Mat>& images);
 }
