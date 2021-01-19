@@ -22,5 +22,7 @@ namespace rv {
     void setLowV(int value) { lowV() = std::clamp(value, 0, highV() - 1); }
   };
 
-  void thresholdImage(cv::Mat& src, cv::Mat& dst, int blurSize, rv::Threshold threshold, cv::Mat open, cv::Mat close);
+  void thresholdImage(cv::Mat& src, cv::Mat& dst, int blurSize, rv::Threshold threshold, cv::Mat openMatrix, cv::Mat closeMatrix);
+
+  void extractImagesFromDirectory(std::string filepath, std::vetcor<cv::Mat>& images);
 }

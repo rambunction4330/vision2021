@@ -1,6 +1,10 @@
-#include <rambunctionVision/imageProcessing.hpp>
+#include "rambunctionVision/imageProcessing.hpp"
+
+#include <vector>
+#include <filesystem>
 
 #include <opencv2/imgproc.hpp>
+#include <opencv2/imgcodecs.hpp>
 
 namespace rv {
   void thresholdImage(cv::Mat& src, cv::Mat& dst, int blurSize, rv::Threshold threshold, cv::Mat openMatrix, cv::Mat closeMatrix) {
@@ -15,5 +19,15 @@ namespace rv {
     cv::morphologyEx(open, close, cv::MORPH_CLOSE, closeMatrix);
 
     dst = close;
+  }
+
+  void extractImagesFromDirectory(std::string filepath, std::vector<cv::Mat>& images) {
+    for (auto& file : std::filesystem::directory_iterator(filepath)) {
+      cv::Mat image = cv::imread(file.path().string());
+
+      if (!image.empty()) {
+        images.push_back(image);
+      }
+    }
   }
 }
