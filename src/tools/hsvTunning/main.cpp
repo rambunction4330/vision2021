@@ -73,16 +73,9 @@ int main(int argc, char** argv) {
   std::vector<cv::Mat> images;
 
   if (useImages) {
-    if (!std::filesystem::exists(pathToImages)) {
-      std::cerr << "Could not find directory" << pathToImages << "\n";
+    if (!rv::extractImagesFromDirectory(pathToImages, images)) {
+      std::cerr << "File: '" << pathToImages << "' does not exist\n";
       return 0;
-    }
-
-    for (auto file : std::filesystem::directory_iterator(pathToImages)) {
-      cv::Mat image = cv::imread(file.path().string());
-      if (!image.empty()) {
-        images.push_back(image);
-      }
     }
 
     if (images.empty()) {
