@@ -7,16 +7,16 @@
 #include <opencv2/imgcodecs.hpp>
 
 namespace rv {
-  void thresholdImage(cv::Mat& src, cv::Mat& dst, int blurSize, rv::Threshold threshold, cv::Mat openMatrix, cv::Mat closeMatrix) {
+  void thresholdImage(cv::Mat& src, cv::Mat& dst, rv::Threshold threshold) {
     cv::Mat blur, hsv, thresh, open, close;
 
-    cv::blur(src, blur, cv::Size(blurSize, blurSize));
+    cv::blur(src, blur, cv::Size(std::max(threshold.blurSize, 1), std::max(threshold.blurSize, 1)));
 
     cv::cvtColor(blur, hsv, cv::COLOR_BGR2HSV);
     cv::inRange(hsv, cv::Scalar(threshold.low), cv::Scalar(threshold.high), thresh);
 
-    cv::morphologyEx(thresh, open, cv::MORPH_OPEN, openMatrix);
-    cv::morphologyEx(open, close, cv::MORPH_CLOSE, closeMatrix);
+    cv::morphologyEx(thresh, open, cv::MORPH_OPEN, threshold.openMatrix);
+    cv::morphologyEx(open, close, cv::MORPH_CLOSE, threshold.closeMatrix);
 
     dst = close;
   }

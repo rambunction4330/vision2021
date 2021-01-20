@@ -3,11 +3,17 @@
 #include <vector>
 
 #include <opencv2/core.hpp>
+#include <opencv2/imgproc.hpp>
 
 namespace rv {
   struct Threshold {
     cv::Scalar_<int> high = {180, 255, 255};
     cv::Scalar_<int> low  = {0, 0, 0};
+
+    int blurSize = 15;
+
+    cv::Mat openMatrix = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(15,15));;
+    cv::Mat closeMatrix = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(15,15));;
 
     int& highH() { return high[0]; }
     int& lowH()  { return low[0];  }
@@ -24,7 +30,7 @@ namespace rv {
     void setLowV(int value) { lowV() = std::clamp(value, 0, highV() - 1); }
   };
 
-  void thresholdImage(cv::Mat& src, cv::Mat& dst, int blurSize, rv::Threshold threshold, cv::Mat openMatrix, cv::Mat closeMatrix);
+  void thresholdImage(cv::Mat& src, cv::Mat& dst, rv::Threshold threshold);
 
   bool extractImagesFromDirectory(std::string filepath, std::vector<cv::Mat>& images);
 }
