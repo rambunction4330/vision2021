@@ -18,9 +18,11 @@ int main(int argc, char** argv) {
   
   // Keys for argument parsing
   const std::string keys = 
-  "{ h ? help usage |   | prints this message             }"
-  "{ c camera       | 0 | Camera id used for thresholding }"
-  "{ i images       |   | Optional images for HSV Tunning }";
+  "{ h ? help usage |   | prints this message                   }"
+  "{ c camera       | 0 | Camera id used for thresholding       }"
+  "{ i images       |   | Optional images for HSV Tunning       }"
+  "{ b blur         |   | Whether to present a blur slider      }"
+  "{ m morph        |   | Whether to present morphology sliders }";
 
   // Parser object
   cv::CommandLineParser parser(argc, argv, keys);
@@ -37,6 +39,8 @@ int main(int argc, char** argv) {
   int cameraID = parser.get<double>("camera");
   bool useImages = parser.has("images");
   std::string pathToImages = parser.get<std::string>("images");
+  bool useBlurSlider = parser.has("blur");
+  bool useMorphSlider = parser.has("morph");
 
   // Cheack for errors
   if (!parser.check()) {
@@ -50,6 +54,7 @@ int main(int argc, char** argv) {
 
   // Threshold variables
   rv::Threshold threshold;
+  int openSize = 15, openShape = 0, closeSize = 15, closeShape = 0;
 
   // Create window
   cv::namedWindow("HSV Tunning");
@@ -61,6 +66,17 @@ int main(int argc, char** argv) {
   cv::createTrackbar("Low S", "HSV Tunning", &threshold.lowS(), 255);
   cv::createTrackbar("High V",  "HSV Tunning", &threshold.highV(),  255);
   cv::createTrackbar("Low V", "HSV Tunning", &threshold.lowV(), 255);
+
+  if (useBlurSlider) {
+    cv::createTrackbar("Blur Size", "HSV Tunning", &threshold.blurSize, 100);
+  }
+
+  if (useMorphSlider) {
+    cv::createTrackbar("Open Size", "HSV Tunning", &openSize, 100);
+    cv::createTrackbar("Open Type", "HSV Tunning", &openShape, 2);
+    cv::createTrackbar("Close Size", "HSV Tunning", &closeSize, 100);
+    cv::createTrackbar("Close Type", "HSV Tunning", &closeShape, 2);
+  }
 
   //****************************************************************************
   // Camera Initialization
@@ -95,10 +111,9 @@ int main(int argc, char** argv) {
   }
 
   int imageIndex = 0;
-  bool showThresh = true, useBallDetection = false, useTargetDetection = false;
+  bool showThresh = true, showBlur = false, useBallDetection = false, useTargetDetection = false;
   cv::Mat image, thresh, display;
   while (true) {
-    imageIndex = std::clamp(imageIndex, 0, (int) images.size()-1);
     
     if (useImages) {
       image = images[imageIndex];
@@ -117,11 +132,18 @@ int main(int argc, char** argv) {
     // Threshold Image
     //**************************************************************************
 
-    rv::thresholdImage(image, thresh, 15, threshold, cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(15, 15)), cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(15, 15)));
+    if (useMorphSlider) {
+      threshold.closeMatrix = cv::getStructuringElement(closeShape, {std::max(closeSize, 1), std::max(closeSize, 1)});
+      threshold.openMatrix = cv::getStructuringElement(openShape, {std::max(openSize, 1), std::max(openSize, 1)});
+    }
+
+    rv::thresholdImage(image, thresh, threshold);
 
     // Conditionaly display a thresheld view 
     if (showThresh) {
       cv::cvtColor(thresh, display, cv::COLOR_GRAY2BGR);
+    } else if (showBlur) {
+      cv::blur(image, display, {std::max(threshold.blurSize, 1), std::max(threshold.blurSize, 1)});
     } else {
       image.copyTo(display);
     }
@@ -149,11 +171,11 @@ int main(int argc, char** argv) {
     int key = cv::waitKey(30);
 
     showThresh = (key == 't') ? !showThresh : showThresh;
-    useBallDetection = (key == 'b') ? !useBallDetection : useBallDetection;
-    useTargetDetection = (key == 'c') ? !useTargetDetection : useTargetDetection;
+    useBallDetection = (key == 'd') ? !useBallDetection : useBallDetection;
+    showBlur = (key == 'b') ? !showBlur : showBlur;
 
-    imageIndex += (key == '>' || key == '.') ? 1 : 0;
-    imageIndex -= (key == '<' || key == ',') ? 1 : 0;
+    imageIndex = (key == '>' || key == '.') ? std::min(imageIndex + 1, (int) images.size()-1) : imageIndex;
+    imageIndex = (key == '<' || key == ',') ? std::max(imageIndex - 1, 0) : imageIndex;
 
     if (key == 'q' || key == 27) {
       break;
