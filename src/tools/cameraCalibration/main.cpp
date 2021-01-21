@@ -1,4 +1,5 @@
 #include <iostream>
+#include <filesystem>
 
 #include <opencv2/core.hpp>
 #include <opencv2/videoio.hpp>
@@ -6,6 +7,7 @@
 #include <opencv2/highgui.hpp>
 
 #include "rambunctionVision/imageProcessing.hpp"
+#include "rambunctionVision/camera.hpp"
 
 void findChessboardPointsInImages(std::vector<cv::Mat>& images, std::vector<std::vector<cv::Point2f>>& chessboardPoints, cv::Size chessboardSize);
 
@@ -20,7 +22,9 @@ int main (int argc, char** argv) {
   "{ c camera       |   0   | Camera id used for thresholding }"
   "{ i images       |       | Optional images for HSV Tunning }"
   "{ squareSize     |   25  | Size of each chessboard square  }"
-  "{ chessboardSize | (9,6) | Dimensions of the chessboard    }";
+  "{ chessboardSize | (9,6) | Dimensions of the chessboard    }"
+  "{ in input       |       | Input file                      }"
+  "{ out output     |       | Output file                     }";
 
   // Parser object
   cv::CommandLineParser parser(argc, argv, keys);
@@ -38,6 +42,8 @@ int main (int argc, char** argv) {
   bool useImages = parser.has("images");
   std::string pathToImages = parser.get<std::string>("images");
   double squareSize = parser.get<int>("squareSize");
+  std::string inputFile = parser.get<std::string>("input");
+  std::string outputFile = parser.get<std::string>("output");
 
   cv::Size chessboardSize;
   if (sscanf(parser.get<std::string>("chessboardSize").c_str(), "(%d,%d)", &chessboardSize.width, &chessboardSize.height) != 2) {
@@ -49,6 +55,16 @@ int main (int argc, char** argv) {
   if (!parser.check()) {
     parser.printErrors();
     return 0;
+  }
+
+  cv::FileStorage fileStorage;
+  rv::Camera camera;
+
+  if (inputFile != "" && std::filesystem::exists(inputFile)) {
+    fileStorage.open(inputFile, cv::FileStorage::READ);
+    if (fileStorage.isOpened()) {
+      fileStorage["Camera"] >> camera;
+    }
   }
 
   cv::VideoCapture capture;
@@ -93,8 +109,15 @@ int main (int argc, char** argv) {
     return 0;
   }
 
-  cv::Mat cameraMatrix, distortion, rvecs, tvecs;
-  cv::calibrateCamera(getChessboardPoints(chessboardSize, squareSize, chessboardPoints.size()), chessboardPoints, imageSize, cameraMatrix, distortion, rvecs, tvecs);
+  cv::Mat rvecs, tvecs;
+  cv::calibrateCamera(getChessboardPoints(chessboardSize, squareSize, chessboardPoints.size()), chessboardPoints, imageSize, camera.matrix, camera.distortion, rvecs, tvecs);
+
+  if (inputFile != "" && std::filesystem::exists(inputFile)) {
+    fileStorage.open(inputFile, cv::FileStorage::READ);
+    if (fileStorage.isOpened()) {
+      fileStorage["Camera"] >> camera;
+    }
+  }
 
   if (!useImages) {
     capture.open(cameraID);
@@ -128,7 +151,7 @@ int main (int argc, char** argv) {
     }
 
     if (undistort) {
-      cv::undistort(image, display, cameraMatrix, distortion);
+      cv::undistort(image, display, camera.matrix, camera.distortion);
     } else {
       image.copyTo(display);
     }
@@ -138,6 +161,14 @@ int main (int argc, char** argv) {
     char key = cv::waitKey(30);
 
     undistort = (key == 'd') ? !undistort : undistort;
+
+    if (key == 's' && outputFile != "" ) {
+      fileStorage.open(outputFile, cv::FileStorage::WRITE);
+      if (fileStorage.isOpened()) {
+        fileStorage << "Camera" << camera;
+      }
+      break;
+    }
 
     if (key == 'q' | key == 27) {
       break;
