@@ -3,6 +3,7 @@ project(vision2021 VERSION 0.0.0)
 
 # The project is set to build with C++17
 set (CMAKE_CXX_STANDARD 17)
+set(CMAKE_OSX_DEPLOYMENT_TARGET 10.15)
 
 # Set Output Directories
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
