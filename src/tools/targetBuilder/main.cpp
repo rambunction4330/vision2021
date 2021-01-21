@@ -14,7 +14,7 @@ int main (int argc, char** argv) {
   // Parser object
   cv::CommandLineParser parser(argc, argv, keys);
   parser.about("\nvision2021 v0.0.0 cameraCalibration"
-               "\nTool to calibrate a camera\n");
+               "\nTool to genrate a Target\n");
 
   bool makeBall = parser.has("ball");
   std::string outputFile = parser.get<std::string>("output");
