@@ -30,7 +30,7 @@ namespace rv {
     void setLowV(int value) { lowV() = std::clamp(value, 0, highV() - 1); }
 
     void write(cv::FileStorage& fs) const {
-      fs << "{" << "High" << high << "Low" << low << << "BlurSize" << blurSize << "OpenMatrix" << openMatrix << "CloseMatrix" << closeMatrix << "}";
+      fs << "{" << "High" << high << "Low" << low << "BlurSize" << blurSize << "OpenMatrix" << openMatrix << "CloseMatrix" << closeMatrix << "}";
     }
 
     void read(const cv::FileNode& node) {
@@ -46,7 +46,7 @@ namespace rv {
     x.write(fs);
   }
   
-  static void read(const cv::FileNode& node, rv::Threshold& x, const rv::Threshold& default_value = rv::Threshold()){
+  static void read(const cv::FileNode& node, rv::Threshold& x, const rv::Threshold& default_value = rv::Threshold()) {
     if(node.empty()) {
       x = default_value;
     } else {
