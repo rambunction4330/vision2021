@@ -4,6 +4,7 @@
 #include <math.h>
 #include <filesystem>
 
+#include <opencv2/core.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
 
@@ -22,7 +23,9 @@ int main(int argc, char** argv) {
   "{ c camera       | 0 | Camera id used for thresholding       }"
   "{ i images       |   | Optional images for HSV Tunning       }"
   "{ b blur         |   | Whether to present a blur slider      }"
-  "{ m morph        |   | Whether to present morphology sliders }";
+  "{ m morph        |   | Whether to present morphology sliders }"
+  "{ in input       |   | Input file                            }"
+  "{ out output     |   | Output file                           }";
 
   // Parser object
   cv::CommandLineParser parser(argc, argv, keys);
@@ -41,6 +44,8 @@ int main(int argc, char** argv) {
   std::string pathToImages = parser.get<std::string>("images");
   bool useBlurSlider = parser.has("blur");
   bool useMorphSlider = parser.has("morph");
+  std::string inputFile = parser.get<std::string>("input");
+  std::string outputFile = parser.get<std::string>("output");
 
   // Cheack for errors
   if (!parser.check()) {
@@ -48,12 +53,22 @@ int main(int argc, char** argv) {
     return 0;
   }
 
+  cv::FileStorage fileStorage;
+
   //****************************************************************************
   // GUI setup
   //****************************************************************************
 
   // Threshold variables
   rv::Threshold threshold;
+  if (inputFile != "" && std::filesystem::exists(inputFile)) {
+    fileStorage.open(inputFile, cv::FileStorage::READ);
+    if (fileStorage.isOpened()) {
+      fileStorage["Threshold"] >> threshold;
+    }
+    fileStorage.release();
+  }
+
   int openSize = 15, openShape = 0, closeSize = 15, closeShape = 0;
 
   // Create window
@@ -177,6 +192,15 @@ int main(int argc, char** argv) {
     imageIndex = (key == '>' || key == '.') ? std::min(imageIndex + 1, (int) images.size()-1) : imageIndex;
     imageIndex = (key == '<' || key == ',') ? std::max(imageIndex - 1, 0) : imageIndex;
 
+    if (key == 's' && outputFile != "") {
+      fileStorage.open(outputFile, cv::FileStorage::WRITE);
+      if (fileStorage.isOpened()) {
+        fileStorage << "Threshold" << threshold;
+      }
+      fileStorage.release();
+      break;
+    }
+
     if (key == 'q' || key == 27) {
       break;
     }
@@ -185,5 +209,6 @@ int main(int argc, char** argv) {
   cv::destroyAllWindows();
   capture.release();
   cv::waitKey(1);
+  fileStorage.release();
   return 0;
 }
