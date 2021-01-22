@@ -19,7 +19,7 @@ namespace rv {
     };
   }
 
-   double rv::Circle::area() {
+  double rv::Circle::area() {
     return radius * radius * M_PI;
   }
 
@@ -35,35 +35,53 @@ namespace rv {
 
   bool approximateNGon(std::vector<cv::Point2f>& src, std::vector<cv::Point2f>& dst, int n, double start, double end, double step) {
     std::vector<cv::Point2f> aprox;
+
+    // Continually try aproximations with a lower 
+    // accuracy untill it has n sides.
     for (double epsilon = start; epsilon < end; epsilon += step) {
       cv::approxPolyDP(src, aprox, epsilon, true);
 
+      // If the approximation has too few sides 
+      // it failed, so return flase.
       if (aprox.size() < n) {
         return false;
       }
 
+      // If the aproximation  has the corrct number of sides 
+      // return true, and set the output to the aproximation.
       if (aprox.size() == n) {
         dst = aprox;
         return true;
       }
     }
-
+    // If it gets to the end and no proper aproximation 
+    // has been found, retun false.
     return false;
   }
 
   void reorderPoints(std::vector<cv::Point2f>& points) {
+
+    // If the points are counter-clockwise, they will be reversed.
+    if (cv::contourArea(points, true) < 0) {
+      std::reverse(points.begin(), points.end());
+    }
+
+    // Find the point that is closes to (0,0)
     auto start = std::min_element(points.begin(), points.end(), [](const cv::Point2f& a, const cv::Point2f& b) {
       return std::sqrt((a.x * a.x) + (a.y * a.y)) < std::sqrt((b.x * b.x) + (b.y * b.y));
     });
 
+    // Rotate the vector so that the closest point is first
     std::rotate(points.begin(), start, points.end());
   }
 
   cv::Mat normalizedContourImage(std::vector<cv::Point2f> contour, std::vector<cv::Point2f>& projectedContour, cv::Mat& image) {
+    // FInd the bounding rotated rect
     cv::RotatedRect rect = cv::minAreaRect(contour);
     cv::Point2f srcPoints[4];
     rect.points(srcPoints);
 
+    // Corners of a 255x255 image
     const static cv::Point2f dstPoints[4] = {
       {0, 255},
       {0,0},
@@ -71,12 +89,16 @@ namespace rv {
       {255, 255}
     };
 
+    // Transform the poins such that the bounding rect
+    // is now the fram of 255 x 255 image.
     cv::Mat transform = cv::getPerspectiveTransform(srcPoints, dstPoints);
     cv::transform(contour, projectedContour, transform);
 
+    // Draw the points on to the image
     image = cv::Mat(255, 255, CV_8UC1, 0);
     cv::drawContours(image, rv::inVector(rv::convertToPoints<int>(projectedContour)), 0, 255, -1);
 
+    // Return the matrix used to transform the points.
     return transform;
   }
 
@@ -85,9 +107,13 @@ namespace rv {
     for (auto& match : matches) {
       cv::Mat shapeImage, targetImage, compareImage;
       std::vector<cv::Point2f> projectedShape, projectedTarget;
+
+      // Transforms both the target and contour into a 255x255 image
       cv::Mat shapeTransform = normalizedContourImage(match.shape, projectedShape, shapeImage);
       cv::Mat targetTransform = normalizedContourImage(match.target.shape, projectedTarget, targetImage);
 
+      // Determin which orintatiion of images has the most overlap
+      // and thus is the proper orientation of the contour.
       cv::bitwise_xor(shapeImage, targetImage, compareImage);
       double bestValue = cv::countNonZero(compareImage);
       int bestRot = 0;
@@ -105,23 +131,34 @@ namespace rv {
         }
       }
 
+      // Calculate the rotation matrix of that rotation.
+      // An extra row must be added to the bottom to 
+      // make it a perspective and not afline transform.
       cv::Mat rotation;
       cv::vconcat(cv::getRotationMatrix2D({127, 127}, bestRot, 1), cv::Mat(1, 3, CV_32FC1, {0,0,1}), rotation);
       cv::transform(projectedShape, projectedShape, rotation);
 
+      // Aproximate the contour to the same number of sides as the target
       approximateNGon(projectedShape, projectedShape, match.target.shape.size(), 15, 50, 0.5);
 
+      // Reorder both the contour and the target so that they
+      // start with the point closes to the origin. This assures
+      // Point corospondence between the two.
       reorderPoints(projectedShape);
       reorderPoints(projectedTarget);
 
-
+      // Transform all the points back to thier origional locations
       std::vector<cv::Point2f> outputContour, outputTarget;
       cv::transform(projectedShape, outputContour, (shapeTransform * rotation).inv());
       cv::transform(projectedTarget, outputTarget, targetTransform.inv());
 
+      // Add the modifies contour and target to the match
       rv::TargetMatch outputMatch = match;
       outputMatch.shape = outputContour;
       outputMatch.target.shape = outputTarget;
+
+      // Update the match value with a more accurate one
+      // creaated during orientation matching.
       outputMatch.match = 1 - (bestRot / (255 * 255));
 
       output.push_back(outputMatch);
@@ -132,12 +169,16 @@ namespace rv {
 
   std::vector<rv::TargetMatch> findTargets(std::vector<std::vector<cv::Point>> contours, std::vector<rv::Target> targets, double minArea, double minMatch) {
     std::vector<rv::TargetMatch> matches;
+
     for (auto& contour : contours) {
+
+      // Make sure the contoyr isn't too small.
       double contourArea = cv::contourArea(contour);
       if (contourArea < minArea) {
         continue;
       }
 
+      // Find the target that best matches each contour.
       rv::Target matchingTarget;
       double bestMatch = minMatch;
       for (auto& target : targets) {
@@ -149,6 +190,7 @@ namespace rv {
         }
       }
 
+      // If an adequet matching target could be found, add in to the vector. 
       if (!matchingTarget.shape.empty()) {
         matches.push_back(rv::TargetMatch {rv::convertToPoints<float>(contour), matchingTarget, bestMatch});
       }
@@ -158,6 +200,7 @@ namespace rv {
   }
 
   std::vector<rv::TargetPose> estimateTargetPose(std::vector<TargetMatch> matches, cv::Mat cameraMatrix, cv::Mat distortion) {
+    // Run a position estimation over all the matches.
     std::vector<rv::TargetPose> positions;
     for (auto& match : matches) {
       rv::TargetPose position;
@@ -171,6 +214,7 @@ namespace rv {
     std::vector<rv::CircleMatch> matches;
     for (auto& contour : contours) {
 
+      // Cheak if the contour is too small to consider
       double contourArea = cv::contourArea(contour);
       if (contourArea < minArea) {
         continue;
@@ -178,8 +222,12 @@ namespace rv {
 
       rv::Circle circle;
       cv::minEnclosingCircle(contour, circle.center, circle.radius);
+
+      // How much it fills the bounding circle
+      // This can also be though of as how circular it is
       double matchValue = contourArea / circle.area();
 
+      // If the match is sufficent, 
       if (matchValue > minMatch) {
         matches.push_back({contour, circle, matchValue});
       }
@@ -189,6 +237,7 @@ namespace rv {
 
   std::vector<rv::BallPose> estimateBallPose(std::vector<CircleMatch> circles, rv::Ball ball, cv::Mat cameraMatrix, cv::Mat distortion) {
     std::vector<rv::BallPose> positions;
+    // Run a position estimation over all the balls.
     for (auto& circle : circles) {
       rv::BallPose position;
       cv::solvePnP(ball.points(), circle.circle.points(), cameraMatrix, distortion, position.rvec, position.tvec);
