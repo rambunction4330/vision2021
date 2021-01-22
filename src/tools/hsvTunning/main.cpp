@@ -17,7 +17,7 @@ int main(int argc, char** argv) {
   // Argument Parsing
   //****************************************************************************
   
-  // Keys for argument parsing
+  // Keys for argument parsing (The flags you can set on the executable)
   const std::string keys = 
   "{ h ? help usage |   | prints this message                   }"
   "{ c camera       | 0 | Camera id used for thresholding       }"
@@ -27,7 +27,7 @@ int main(int argc, char** argv) {
   "{ in input       |   | Input file                            }"
   "{ out output     |   | Output file                           }";
 
-  // Parser object
+  // Object to parse any argument given
   cv::CommandLineParser parser(argc, argv, keys);
   parser.about("\nvision2021 v0.0.0 hsvTunning"
                "\nTool to find hsv thresholding value\n");
@@ -40,7 +40,6 @@ int main(int argc, char** argv) {
 
   // Get arguments from the parser
   int cameraID = parser.get<double>("camera");
-  bool useImages = parser.has("images");
   std::string pathToImages = parser.get<std::string>("images");
   bool useBlurSlider = parser.has("blur");
   bool useMorphSlider = parser.has("morph");
@@ -53,21 +52,74 @@ int main(int argc, char** argv) {
     return 0;
   }
 
-  cv::FileStorage fileStorage;
-
   //****************************************************************************
-  // GUI setup
+  // Extract Data From Input Files
   //****************************************************************************
 
-  // Threshold variables
+  // -----------------------------
+  // Extract input threshold data 
+  // -----------------------------
+
+  // Variable to hold any thresholding data
   rv::Threshold threshold;
-  if (inputFile != "" && std::filesystem::exists(inputFile)) {
-    fileStorage.open(inputFile, cv::FileStorage::READ);
-    if (fileStorage.isOpened()) {
-      fileStorage["Threshold"] >> threshold;
+
+  // If a file was given, extract the data from that file
+  if (inputFile == "") {
+    if (std::filesystem::exists(inputFile)) {
+      cv::FileStorage storage(inputFile, cv::FileStorage::READ);
+      if (!storage.isOpened()) {
+        storage["Threshold"] >> threshold;
+      } else {
+        std::cerr << "Error opening input file: '" << inputFile << "'\n";
+        return 0;
+      }
+      storage.release();
+    } else {
+      std::cerr << "Could not find input file: '" << inputFile << "'\n";
+      return 0;
     }
-    fileStorage.release();
   }
+
+  // -------------------------
+  // Extract input image data 
+  // -------------------------
+
+  // Camera for video tunning
+  cv::VideoCapture capture;
+
+  // Image vector for image tunning
+  std::vector<cv::Mat> images;
+
+  // Setup images if images are given, otherwise setup for camera
+  if (pathToImages != "") {
+    // Pull images from the folder into the vector of images
+    bool foundDir = rv::extractImagesFromDirectory(pathToImages, images);
+
+    // Return any nessesary errors
+    if (!foundDir) {
+      std::cerr << "File: '" << pathToImages << "' does not exist\n";
+      return 0;
+    }
+
+    if (images.empty()) {
+      std::cerr << "No images could be found at" << pathToImages << "\n";
+      return 0;
+    }
+
+  } else {
+    // Open camera with the given id
+    capture.open(cameraID);
+
+    // Check camera data
+    if (!capture.isOpened()) {
+      std::cerr << "Could access camera with id: '" << cameraID << "'\n";
+      return 0;
+    }
+  }
+
+  //****************************************************************************
+  // GUI Setup
+  //****************************************************************************
 
   int openSize = 15, openShape = 0, closeSize = 15, closeShape = 0;
 
@@ -82,6 +134,8 @@ int main(int argc, char** argv) {
   cv::createTrackbar("High V",  "HSV Tunning", &threshold.highV(),  255);
   cv::createTrackbar("Low V", "HSV Tunning", &threshold.lowV(), 255);
 
+  // Conditionaly add extra sliders depending on argument flags
+
   if (useBlurSlider) {
     cv::createTrackbar("Blur Size", "HSV Tunning", &threshold.blurSize, 100);
   }
@@ -93,69 +147,59 @@ int main(int argc, char** argv) {
     cv::createTrackbar("Close Type", "HSV Tunning", &closeShape, 2);
   }
 
-  //****************************************************************************
-  // Camera Initialization
-  //****************************************************************************
+  //**************************************************************************
+  // Main Loop
+  //**************************************************************************
 
-  // Camera for video tunning
-  cv::VideoCapture capture;
-
-  // Image vector for image tunning
-  std::vector<cv::Mat> images;
-
-  if (useImages) {
-    if (!rv::extractImagesFromDirectory(pathToImages, images)) {
-      std::cerr << "File: '" << pathToImages << "' does not exist\n";
-      return 0;
-    }
-
-    if (images.empty()) {
-      std::cerr << "No images could be found at" << pathToImages << "\n";
-      return 0;
-    }
-
-  } else {
-    // Camera
-    bool opened = capture.open(cameraID);
-
-    // Check camera data
-    if (!opened) {
-      std::cerr << "Could access camera\n";
-      return 0;
-    }
-  }
-
+  // Index of the current image to be shown, if images are being used.
   int imageIndex = 0;
-  bool showThresh = true, showBlur = false, useBallDetection = false, useTargetDetection = false;
+
+  // Conditionals to display diffrent types of data.
+  bool showThresh = true, showBlur = false;
+  bool ballDetection = false, targetDetection = false;
+
   cv::Mat image, thresh, display;
   while (true) {
-    
-    if (useImages) {
+    // -----------
+    // Load image
+    // -----------
+
+    // Load up the proper image from either the vector or camera.
+    if (pathToImages != "") {
       image = images[imageIndex];
     } else {
-      // Get the next frame from the camera
+      // Get the next frame from the camera.
       capture >> image;
 
-      // Check camera data
+      // Check camera data.
       if (image.empty()) {
         std::cerr << "Lost connection to camera\n";
         break;
       }
     }
 
-    //**************************************************************************
-    // Threshold Image
-    //**************************************************************************
-
+    // ---------------
+    // Proccess image
+    // ---------------
+    
+    // Pull in data from morph sliders.
+    // This doesn't have to be done for the others since they are directly modify the value. 
     if (useMorphSlider) {
       threshold.closeMatrix = cv::getStructuringElement(closeShape, {std::max(closeSize, 1), std::max(closeSize, 1)});
       threshold.openMatrix = cv::getStructuringElement(openShape, {std::max(openSize, 1), std::max(openSize, 1)});
     }
 
+    // Threshold thge image acording to the sliders into the `thresh` variable.
     rv::thresholdImage(image, thresh, threshold);
 
-    // Conditionaly display a thresheld view 
+    // --------------------
+    // Prepare for display
+    // --------------------
+
+    // Conditionaly display a thresheld, blured, or normal view.
+    // These actions each output to a `display` variable to be displayed.
     if (showThresh) {
+      // The image is converted back to BGR for overlays.
       cv::cvtColor(thresh, display, cv::COLOR_GRAY2BGR);
     } else if (showBlur) {
       cv::blur(image, display, {std::max(threshold.blurSize, 1), std::max(threshold.blurSize, 1)});
@@ -163,44 +207,54 @@ int main(int argc, char** argv) {
       image.copyTo(display);
     }
 
-    //**************************************************************************
-    // Ball Detection
-    //**************************************************************************
+    // Find contours in the image for ball and image detection
+    std::vector<std::vector<cv::Point>> contours;
+    cv::findContours(thresh, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_NONE);
 
-    if (useBallDetection) {
-      // Find contours in the image
-      std::vector<std::vector<cv::Point>> contours;
-      cv::findContours(thresh, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_NONE);
-
+    // Conditionaly attempt to finds and show balls in the image.
+    if (ballDetection) {
+      // Find all the contours that are sufficently circular
       std::vector<rv::CircleMatch> circles = rv::findCircles(contours, 50, 0.60);
 
+      // Draw all the circles
       for (auto& circle : circles) {
-        cv::circle(display, circle.circle.center, (int) circle.circle.radius, {0,0,255}, 3);
+        cv::circle(display, circle.circle.center, static_cast<int>(circle.circle.radius), {0,0,255}, 3);
       }
     }
 
     // Show the frames.
     cv::imshow("HSV Tunning", display);
 
-    // Parse key presses.
+    // -----------------
+    // Pasre Keystrokes
+    // -----------------
+
+    // key that was pressed
     int key = cv::waitKey(30);
 
+    // Toggle display variables
     showThresh = (key == 't') ? !showThresh : showThresh;
-    useBallDetection = (key == 'd') ? !useBallDetection : useBallDetection;
+    ballDetection = (key == 'd') ? !ballDetection : ballDetection;
     showBlur = (key == 'b') ? !showBlur : showBlur;
 
-    imageIndex = (key == '>' || key == '.') ? std::min(imageIndex + 1, (int) images.size()-1) : imageIndex;
+    // Cycle through image indexes
+    imageIndex = (key == '>' || key == '.') ? std::min(imageIndex + 1, static_cast<int>(images.size()-1)) : imageIndex;
     imageIndex = (key == '<' || key == ',') ? std::max(imageIndex - 1, 0) : imageIndex;
 
+
+    // Save if 's' is pressed, and a file was given to output to.
     if (key == 's' && outputFile != "") {
-      fileStorage.open(outputFile, cv::FileStorage::WRITE);
-      if (fileStorage.isOpened()) {
-        fileStorage << "Threshold" << threshold;
+      cv::FileStorage storage(outputFile, cv::FileStorage::WRITE);
+      if (storage.isOpened()) {
+        storage << "Threshold" << threshold;
+      } else {
+        std::cerr << "Error opening output file: '" << outputFile << "'\n";
+        break;
       }
-      fileStorage.release();
-      break;
+      storage.release();
     }
 
+    // Exit the tool
     if (key == 'q' || key == 27) {
       break;
     }
@@ -209,6 +263,5 @@ int main(int argc, char** argv) {
   cv::destroyAllWindows();
   capture.release();
   cv::waitKey(1);
-  fileStorage.release();
   return 0;
 }
