@@ -16,8 +16,6 @@ namespace rv {
 
   /**
    * @brief The camera properties.
-   * 
-   * @see 
    */
   struct Camera {
     cv::Mat matrix; /**< The intrensic camera matrix to convert between 2d and 3d points. */

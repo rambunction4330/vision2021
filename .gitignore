@@ -42,3 +42,8 @@
 **/build
 **/lib
 **/obj
+
+# documentation
+**/doc/html
+**/doc/latex
+**/doc/xml
