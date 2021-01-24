@@ -1,9 +1,27 @@
+/**
+ * @file camera.hpp
+ * @author George Jurgiel (gcjurgiel@icloud.com)
+ * @brief Structer and functions to hold and change camera settings
+ * @version 0.1
+ * @date 2021-01-23
+ * 
+ * @copyright Copyright (c) 2021
+ */
 #include <opencv2/core.hpp>
 
+/**
+ * @brief 'Rambunction Vision' namespace to store shared code.
+ */
 namespace rv {
+
+  /**
+   * @brief The camera properties.
+   * 
+   * @see 
+   */
   struct Camera {
-    cv::Mat matrix;
-    cv::Mat distortion;
+    cv::Mat matrix; /**< The intrensic camera matrix to convert between 2d and 3d points. */
+    cv::Mat distortion; /**< The coeeficents to account for lense distortion. */
 
     void write(cv::FileStorage& fs) const {
       fs << "{" << "Matrix" << matrix << "Distortion" << distortion << "}";
