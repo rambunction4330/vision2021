@@ -295,7 +295,7 @@ int main(int argc, char** argv) {
       } else {
         // Draw all the circles
         for (auto& circle : circles) {
-          cv::circle(display, circle.circle.center, circle.circle.radius, {0, 0, 255}, 1);
+          cv::circle(display, circle.circle.center, circle.circle.radius, {0, 0, 255}, 4);
         }
       }
     }
@@ -309,6 +309,7 @@ int main(int argc, char** argv) {
         std::vector<rv::TargetMatch> proccessedMatch = rv::matchTargetPoints(matches);
 
         for (auto& match : proccessedMatch) {
+          cv::putText(display, match.target.name, match.shape[0], cv::FONT_HERSHEY_SIMPLEX, 1.0, {0,0,255}, 2);
           cv::drawContours(display, std::vector<std::vector<cv::Point>>(1, rv::convertToPoints<int>(match.shape)), -1, {0, 0, 255}, 4);
         }
 

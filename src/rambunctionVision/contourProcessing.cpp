@@ -139,7 +139,6 @@ namespace rv {
       // make it a perspective and not afline transform.
       cv::Mat rotation;
       cv::vconcat(cv::getRotationMatrix2D({128, 128}, bestRot, 1), cv::Matx13d{0, 0, 1}, rotation);
-      // cv::vconcat(cv::Matx23d{1.0, 0.0, 0.0, 0.0, 1.0, 0.0}, cv::Matx13d{0.0, 0.0, 1.0}, rotation);
 
       cv::perspectiveTransform(projectedShape, projectedShape, rotation);
 
