@@ -16,7 +16,7 @@
  */
 namespace rv {
     /**
-     * @brief Draws a 3d onto an image given rotation and translation vectors from position estimation.
+     * @brief Draws a 3D axis onto an image given rotation and translation vectors from position estimation.
      * 
      * @param image The image to draw the axis on.
      * @param size The size of the axis in the object space.
@@ -28,4 +28,19 @@ namespace rv {
      * @see estimateBallPose estimateTargetPose
      */
     void drawAxis(cv::Mat& image, double size, cv::Mat cameraMatrix, cv::Mat distortion, cv::Mat rvec, cv::Mat tvec);
+
+        /**
+     * @brief Draws a 3D box onto an image given rotation and translation vectors from position estimation.
+     * 
+     * @param image The image to draw the box on.
+     * @param size The size of the box in the object space.
+     * @param corner
+     * @param cameraMatrix The Matrix representing the intresic camera properties.
+     * @param distortion The cooefficents represnting camera lense distortion.
+     * @param rvec The vector representing object rotation.
+     * @param tvec The vector representing object translation.
+     * 
+     * @see estimateBallPose estimateTargetPose
+     */
+    void drawBox(cv::Mat& image, cv::Vec3d size, cv::Point3f corner, cv::Mat cameraMatrix, cv::Mat distortion, cv::Mat rvec, cv::Mat tvec);
 }
