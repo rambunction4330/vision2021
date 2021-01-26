@@ -245,6 +245,8 @@ namespace rv {
     // Run a position estimation over all the balls.
     for (auto& circle : circles) {
       rv::BallPose position;
+      position.circleMatch = circle;
+      position.ball = ball;
       cv::solvePnP(ball.points(), circle.circle.points(), cameraMatrix, distortion, position.rvec, position.tvec);
       positions.push_back(position);
     }
