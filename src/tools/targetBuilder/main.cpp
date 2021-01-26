@@ -109,7 +109,7 @@ int main (int argc, char** argv) {
     if (outputFile != "") {
       cv::FileStorage storage(outputFile, cv::FileStorage::WRITE);
       if (storage.isOpened()) {
-        storage << "Target" << targets;
+        storage << "Targets" << targets;
       }
     }
   }

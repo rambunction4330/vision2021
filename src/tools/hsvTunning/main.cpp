@@ -8,8 +8,11 @@
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
 
+#include "rambunctionVision/camera.hpp"
+#include "rambunctionVision/conversions.hpp"
 #include "rambunctionVision/contourProcessing.hpp"
 #include "rambunctionVision/imageProcessing.hpp"
+#include "rambunctionVision/drawing.hpp"
 
 int main(int argc, char** argv) {
 
@@ -20,12 +23,15 @@ int main(int argc, char** argv) {
   // Keys for argument parsing (The flags you can set on the executable)
   const std::string keys = 
   "{ h ? help usage |   | prints this message                   }"
-  "{ c camera       | 0 | Camera id used for thresholding       }"
+  "{ id cameraID    | 0 | Camera id used for thresholding       }"
   "{ i images       |   | Optional images for HSV Tunning       }"
   "{ b blur         |   | Whether to present a blur slider      }"
   "{ m morph        |   | Whether to present morphology sliders }"
   "{ in input       |   | Input file                            }"
-  "{ out output     |   | Output file                           }";
+  "{ out output     |   | Output file                           }"
+  "{ camera         |   | Output file                           }"
+  "{ target         |   | Output file                           }"
+  "{ ball           |   | Output file                           }";
 
   // Object to parse any argument given
   cv::CommandLineParser parser(argc, argv, keys);
@@ -39,12 +45,15 @@ int main(int argc, char** argv) {
   }
 
   // Get arguments from the parser
-  int cameraID = parser.get<double>("camera");
+  int cameraID = parser.get<double>("cameraID");
   std::string pathToImages = parser.get<std::string>("images");
   bool useBlurSlider = parser.has("blur");
   bool useMorphSlider = parser.has("morph");
   std::string inputFile = parser.get<std::string>("input");
   std::string outputFile = parser.get<std::string>("output");
+  std::string cameraFile = parser.get<std::string>("camera");
+  std::string targetsFile = parser.get<std::string>("target");
+  std::string ballFile = parser.get<std::string>("ball");
 
   // Cheack for errors
   if (!parser.check()) {
@@ -64,10 +73,10 @@ int main(int argc, char** argv) {
   rv::Threshold threshold;
 
   // If a file was given, extract the data from that file
-  if (inputFile == "") {
+  if (inputFile != "") {
     if (std::filesystem::exists(inputFile)) {
       cv::FileStorage storage(inputFile, cv::FileStorage::READ);
-      if (!storage.isOpened()) {
+      if (storage.isOpened()) {
         storage["Threshold"] >> threshold;
       } else {
         std::cerr << "Error opening input file: '" << inputFile << "'\n";
@@ -79,6 +88,65 @@ int main(int argc, char** argv) {
       return 0;
     }
   }
+
+  // -------------------------------
+  // Extract camera and target data 
+  // -------------------------------
+
+  rv::Camera camera;
+
+  if (cameraFile != "") {
+    if (std::filesystem::exists(cameraFile)) {
+      cv::FileStorage storage(cameraFile, cv::FileStorage::READ);
+      if (storage.isOpened()) {
+        storage["Camera"] >> camera;
+      } else {
+        std::cerr << "Error opening camera file: '" << cameraFile << "'\n";
+        return 0;
+      }
+      storage.release();
+    } else {
+      std::cerr << "Could not find camera file: '" << cameraFile << "'\n";
+      return 0;
+    }
+  }
+
+  std::vector<rv::Target> targets;
+
+  if (targetsFile != "") {
+    if (std::filesystem::exists(targetsFile)) {
+      cv::FileStorage storage(targetsFile, cv::FileStorage::READ);
+      if (storage.isOpened()) {
+        storage["Targets"] >> targets;
+      } else {
+        std::cerr << "Error opening targets file: '" << targetsFile << "'\n";
+        return 0;
+      }
+      storage.release();
+    } else {
+      std::cerr << "Could not find targets file: '" << targetsFile << "'\n";
+      return 0;
+    }
+  }
+
+  rv::Ball ball;
+
+  if (ballFile != "") {
+    if (std::filesystem::exists(ballFile)) {
+      cv::FileStorage storage(ballFile, cv::FileStorage::READ);
+      if (storage.isOpened()) {
+        storage["Ball"] >> ball;
+      } else {
+        std::cerr << "Error opening ball file: '" << ballFile << "'\n";
+        return 0;
+      }
+      storage.release();
+    } else {
+      std::cerr << "Could not find ball file: '" << ballFile << "'\n";
+      return 0;
+    }
+  }
+
 
   // -------------------------
   // Extract input image data 
@@ -157,6 +225,7 @@ int main(int argc, char** argv) {
   // Conditionals to display diffrent types of data.
   bool showThresh = true, showBlur = false;
   bool ballDetection = false, targetDetection = false;
+  bool estimatePose = false;
 
   cv::Mat image, thresh, display;
   while (true) {
@@ -216,9 +285,40 @@ int main(int argc, char** argv) {
       // Find all the contours that are sufficently circular
       std::vector<rv::CircleMatch> circles = rv::findCircles(contours, 50, 0.60);
 
-      // Draw all the circles
-      for (auto& circle : circles) {
-        cv::circle(display, circle.circle.center, static_cast<int>(circle.circle.radius), {0,0,255}, 3);
+      if (estimatePose && cameraFile != "" && ballFile != "") {
+        std::vector<rv::BallPose> positions = rv::estimateBallPose(circles, ball, camera.matrix, camera.distortion);
+
+        for (auto& position : positions) {
+          rv::drawAxis(display, 5, camera.matrix, camera.distortion, position.rvec, position.tvec);
+        }
+
+      } else {
+        // Draw all the circles
+        for (auto& circle : circles) {
+          cv::circle(display, circle.circle.center, circle.circle.radius, {0, 0, 255}, 1);
+        }
+      }
+    }
+
+    if (targetDetection) {
+      cv::drawContours(display, contours, -1, { 255, 0, 0}, 2); 
+
+      if (targetsFile != "") {
+        std::vector<rv::TargetMatch> matches = rv::findTargets(contours, targets, 50, 5.0);
+
+        std::vector<rv::TargetMatch> proccessedMatch = rv::matchTargetPoints(matches);
+
+        for (auto& match : proccessedMatch) {
+          cv::drawContours(display, std::vector<std::vector<cv::Point>>(1, rv::convertToPoints<int>(match.shape)), -1, {0, 0, 255}, 4);
+        }
+
+        if (estimatePose && cameraFile != "" ) {
+          std::vector<rv::TargetPose> positions = rv::estimateTargetPose(proccessedMatch, camera.matrix, camera.distortion);
+
+          for (auto& position : positions) {
+            rv::drawAxis(display, 5, camera.matrix, camera.distortion, position.rvec, position.tvec);
+          }
+        }
       }
     }
 
@@ -234,7 +334,9 @@ int main(int argc, char** argv) {
 
     // Toggle display variables
     showThresh = (key == 't') ? !showThresh : showThresh;
-    ballDetection = (key == 'd') ? !ballDetection : ballDetection;
+    ballDetection = (key == 'c') ? !ballDetection : ballDetection;
+    targetDetection = (key == 'd') ? !targetDetection : targetDetection;
+    estimatePose = (key == 'p') ? !estimatePose : estimatePose;
     showBlur = (key == 'b') ? !showBlur : showBlur;
 
     // Cycle through image indexes

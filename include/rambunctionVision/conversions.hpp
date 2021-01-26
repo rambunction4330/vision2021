@@ -31,7 +31,7 @@ namespace rv {
    */
   template<typename _OutType, typename _InType>
   std::vector<cv::Point_<_OutType>> convertToPoints(std::vector<cv::Point_<_InType>>& input) {
-    std::vector<cv::Point_<_OutType>> output;
+    std::vector<cv::Point_<_OutType>> output(input.size());
     std::transform(input.begin(), input.end(), output.begin(), [](const cv::Point_<_InType>& p) {
       return cv::Point_<_OutType>(static_cast<_OutType>(p.x), static_cast<_OutType>(p.y));
     });
@@ -51,7 +51,7 @@ namespace rv {
    */
   template<typename _OutType, typename _InType>
   std::vector<cv::Point_<_OutType>> convertToPoints(std::vector<cv::Point3_<_InType>>& input) {
-    std::vector<cv::Point_<_OutType>> output;
+    std::vector<cv::Point_<_OutType>> output(input.size());
     std::transform(input.begin(), input.end(), output.begin(), [](const cv::Point3_<_InType>& p) {
       return cv::Point_<_OutType>(static_cast<_OutType>(p.x), static_cast<_OutType>(p.y));
     });
@@ -71,7 +71,7 @@ namespace rv {
    */
   template<typename _OutType, typename _InType>
   std::vector<cv::Point3_<_OutType>> convertToPoints3(std::vector<cv::Point_<_InType>>& input) {
-    std::vector<cv::Point3_<_OutType>> output;
+    std::vector<cv::Point3_<_OutType>> output(input.size());
     std::transform(input.begin(), input.end(), output.begin(), [](const cv::Point_<_InType>& p) {
       return cv::Point3_<_OutType>(static_cast<_OutType>(p.x), static_cast<_OutType>(p.y), 0);
     });
@@ -90,7 +90,7 @@ namespace rv {
    */
   template<typename _OutType, typename _InType>
   std::vector<cv::Point3_<_OutType>> convertToPoints3(std::vector<cv::Point3_<_InType>>& input) {
-    std::vector<cv::Point3_<_OutType>> output;
+    std::vector<cv::Point3_<_OutType>> output(input.size());
     std::transform(input.begin(), input.end(), output.begin(), [](const cv::Point3_<_InType>& p) {
       return cv::Point3_<_OutType>(static_cast<_OutType>(p.x), static_cast<_OutType>(p.y), static_cast<_OutType>(p.z));
     });

@@ -1,6 +1,7 @@
 #include <rambunctionVision/contourProcessing.hpp>
 
 #include <vector>
+#include <iostream>
 
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
@@ -92,11 +93,13 @@ namespace rv {
     // Transform the poins such that the bounding rect
     // is now the fram of 255 x 255 image.
     cv::Mat transform = cv::getPerspectiveTransform(srcPoints, dstPoints);
-    cv::transform(contour, projectedContour, transform);
+
+    // TODO: Fix error here
+    cv::perspectiveTransform(contour, projectedContour, transform);
 
     // Draw the points on to the image
-    image = cv::Mat(255, 255, CV_8UC1, 0);
-    cv::drawContours(image, rv::inVector(rv::convertToPoints<int>(projectedContour)), 0, 255, -1);
+    image = cv::Mat(256, 256, CV_8UC1, cv::Scalar(0));
+    cv::drawContours(image, std::vector<std::vector<cv::Point>>(1, rv::convertToPoints<int>(projectedContour)), 0, 255, -1);
 
     // Return the matrix used to transform the points.
     return transform;
@@ -118,16 +121,16 @@ namespace rv {
       double bestValue = cv::countNonZero(compareImage);
       int bestRot = 0;
 
-      for (int rotation = 0; rotation < 3; rotation++) {
+      for (int rot = 0; rot < 3; rot++) {
         cv::Mat rotImage;
-        cv::rotate(shapeImage, rotImage, rotation);
+        cv::rotate(shapeImage, rotImage, rot);
 
         cv::bitwise_xor(rotImage, targetImage, compareImage);
         double value = cv::countNonZero(compareImage);
 
         if (value < bestValue) {
           bestValue = value;
-          bestRot = (rotation * 90) + 90;
+          bestRot = (rot + 1) * -90;
         }
       }
 
@@ -135,11 +138,17 @@ namespace rv {
       // An extra row must be added to the bottom to 
       // make it a perspective and not afline transform.
       cv::Mat rotation;
-      cv::vconcat(cv::getRotationMatrix2D({127, 127}, bestRot, 1), cv::Mat(1, 3, CV_32FC1, {0,0,1}), rotation);
-      cv::transform(projectedShape, projectedShape, rotation);
+      cv::vconcat(cv::getRotationMatrix2D({128, 128}, bestRot, 1), cv::Matx13d{0, 0, 1}, rotation);
+      // cv::vconcat(cv::Matx23d{1.0, 0.0, 0.0, 0.0, 1.0, 0.0}, cv::Matx13d{0.0, 0.0, 1.0}, rotation);
+
+      cv::perspectiveTransform(projectedShape, projectedShape, rotation);
 
       // Aproximate the contour to the same number of sides as the target
-      approximateNGon(projectedShape, projectedShape, match.target.shape.size(), 15, 50, 0.5);
+      bool aproximated = approximateNGon(projectedShape, projectedShape, match.target.shape.size(), 15, 50, 0.5);
+
+      if (!aproximated) {
+        continue;
+      }
 
       // Reorder both the contour and the target so that they
       // start with the point closes to the origin. This assures
@@ -149,21 +158,19 @@ namespace rv {
 
       // Transform all the points back to thier origional locations
       std::vector<cv::Point2f> outputContour, outputTarget;
-      cv::transform(projectedShape, outputContour, (shapeTransform * rotation).inv());
-      cv::transform(projectedTarget, outputTarget, targetTransform.inv());
+      cv::perspectiveTransform(projectedShape, outputContour, (rotation * shapeTransform).inv());
+      cv::perspectiveTransform(projectedTarget, outputTarget, targetTransform.inv());
 
       // Add the modifies contour and target to the match
       rv::TargetMatch outputMatch = match;
       outputMatch.shape = outputContour;
       outputMatch.target.shape = outputTarget;
-
       // Update the match value with a more accurate one
       // creaated during orientation matching.
       outputMatch.match = 1 - (bestRot / (255 * 255));
 
       output.push_back(outputMatch);
     }
-
     return output;
   }
 
@@ -192,10 +199,9 @@ namespace rv {
 
       // If an adequet matching target could be found, add in to the vector. 
       if (!matchingTarget.shape.empty()) {
-        matches.push_back(rv::TargetMatch {rv::convertToPoints<float>(contour), matchingTarget, bestMatch});
+        matches.push_back({rv::convertToPoints<float>(contour), matchingTarget, bestMatch});
       }
     }
-
     return matches;
   }
 

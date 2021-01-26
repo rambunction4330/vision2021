@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<opencv_storage>
+<Threshold>
+  <High>
+    38 255 255 0</High>
+  <Low>
+    19 102 59 0</Low>
+  <BlurSize>5</BlurSize>
+  <OpenMatrix type_id="opencv-matrix">
+    <rows>13</rows>
+    <cols>13</cols>
+    <dt>u</dt>
+    <data>
+      0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 0 0 0 0 0 1 1 1 1 1
+      1 1 1 1 0 0 0 1 1 1 1 1 1 1 1 1 1 1 0 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+      1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+      1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 0 1 1 1 1 1 1 1 1 1 1 1 0 0 0
+      1 1 1 1 1 1 1 1 1 0 0 0 0 0 1 1 1 1 1 1 1 0 0 0 0 0 0 0 0 0 1 0 0
+      0 0 0 0</data></OpenMatrix>
+  <CloseMatrix type_id="opencv-matrix">
+    <rows>13</rows>
+    <cols>13</cols>
+    <dt>u</dt>
+    <data>
+      0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 0 0 0 0 0 1 1 1 1 1
+      1 1 1 1 0 0 0 1 1 1 1 1 1 1 1 1 1 1 0 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+      1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+      1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 0 1 1 1 1 1 1 1 1 1 1 1 0 0 0
+      1 1 1 1 1 1 1 1 1 0 0 0 0 0 1 1 1 1 1 1 1 0 0 0 0 0 0 0 0 0 1 0 0
+      0 0 0 0</data></CloseMatrix></Threshold>
+</opencv_storage>
