@@ -1,7 +1,7 @@
 /**
  * @file conversions.hpp
  * @author your name (you@domain.com)
- * @brief 
+ * @brief Functions for converting between diffrent types
  * @version 0.1
  * @date 2021-01-23
  * 
