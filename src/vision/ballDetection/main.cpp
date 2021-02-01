@@ -145,6 +145,46 @@ int main (int argc, char** argv) {
   // Network Tables Setup
   //****************************************************************************
 
+  // Table structer
+  // root
+  // | BallDetection
+  // | | BallData
+  // | | | numBalls
+  // | | | ballSize
+  // | | | sortMethod
+  // | | | Ball0
+  // | | | | tvec
+  // | | | | x
+  // | | | | y
+  // | | | | z
+  // | | | | rvec
+  // | | | | roll
+  // | | | | pitch
+  // | | | | yaw
+  // | | | | match
+  // | | | | age
+  // | | | Ball 1
+  // | | | Ball 2
+  // | | | Ball 3
+  // | | | ...
+  // | | CameraData
+  // | | | cameraID
+  // | | | matrix
+  // | | | distortion
+  // | | | FPS
+  // | | | rawFPS
+  // | | | stream
+  // | | | overlay
+  // | | TimeingData
+  // | | | captureTime
+  // | | | threshTime
+  // | | | contourTime
+  // | | | matchTime
+  // | | | poseTime
+  // | | | networkTime
+  // | | | totalTime
+
+  
   // Initilize Network
   auto tableInstance = nt::NetworkTableInstance::GetDefault();
   auto cameraTable = tableInstance.GetTable("BallDetection/CameraData");
@@ -240,8 +280,8 @@ int main (int argc, char** argv) {
 
       // Other info
       table->GetEntry("match").SetDouble(positions[i].circleMatch.match);
-      std::time_t tt = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-      table->GetEntry("age").SetString(std::ctime(&tt));
+      std::time_t t = time(NULL);
+      table->GetEntry("age").SetString(std::asctime(std::gmtime(&t)));
     }
 
     // Send time data
