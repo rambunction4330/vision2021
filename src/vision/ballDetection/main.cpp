@@ -146,6 +146,7 @@ int main (int argc, char** argv) {
   //****************************************************************************
 
   // Table structer
+  //
   // root
   // | BallDetection
   // | | BallData
@@ -163,9 +164,9 @@ int main (int argc, char** argv) {
   // | | | | yaw
   // | | | | match
   // | | | | age
-  // | | | Ball 1
-  // | | | Ball 2
-  // | | | Ball 3
+  // | | | Ball1
+  // | | | Ball2
+  // | | | Ball3
   // | | | ...
   // | | CameraData
   // | | | cameraID
